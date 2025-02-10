@@ -27,7 +27,7 @@ def show_pressed_key():
         return
     print("\n📋 **Recorded Key Presses:**")
     for minute, keys in sorted(press_char.items()):
-        print(f"🕒 {minute}: {', '.join(keys)}")
+        print(f"🕒 {minute}: \n {', '.join(keys)}")
     print()
 
 
@@ -52,3 +52,5 @@ listener_thread.start()
 
 # 🔵 Main loop for user commands - this will continue while listener is running
 command_listener()
+
+#RAFI EDIT 
