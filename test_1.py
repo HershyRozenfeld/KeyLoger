@@ -121,17 +121,9 @@ class EncryptorAndDecryptor:
 
         # XOR each character with the corresponding key character (cycling through the key)
         for i in range(len(encrypted_text)):
-            string += chr(ord(encrypted_text[i]) ^ ord(self.key_word[i % key_length]))  # ✅ Correct XOR
+            string += chr(ord(encrypted_text[i]) ^ ord(self.key_word[i % key_length]))  
 
         with open(self.decrypted_file_name, "w") as f:  # Overwrite to restore original text
             f.write(string)
-
-
-
-writer = Writer("Hello, my name is Joe.")
-
-ec = EncryptorAndDecryptor(writer)
-ec.encrypt()
-
 
 
