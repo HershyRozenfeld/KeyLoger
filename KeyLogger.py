@@ -10,7 +10,7 @@ import requests
 
 
 app = Flask(__name__)
-SERVER_LOG_FILE = "server_logs.txt"  # The file where logs are stored on the server
+SERVER_LOG_FILE = "server_logs.txt"  #the file where logs are stored on the server
 
 @app.route('/upload', methods=['POST'])
 def receive_log():
