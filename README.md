@@ -82,7 +82,7 @@ pip install flask flask-cors pytz
 3. **Deploy the client**
 
    ```bash
-   python main.py
+   python key_logger_manager.py
    ```
 
 4. **Access the web interface**
