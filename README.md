@@ -1,165 +1,170 @@
-פירוט פונקציונליות
-Key Logger Client
-הלקוח רץ על המכשיר המרוחק ומבצע את הפעולות הבאות:
+# KeyLogger Pro
 
-איסוף הקשות:
-משתמש ב-pynput לרישום הקשות בזמן אמת.
-שומר את ההקשות בזיכרון עד לשמירה (ברירת מחדל: כל 20 שניות).
 
-שמירת נתונים:
-תומך בשני יעדים:
-שרת: שולח נתונים מוצפנים לשרת דרך בקשות HTTP.
-קובץ מקומי: שומר ב-JSON מקומי (לא נכלל בקוד זה ישירות).
-תדירות השמירה ניתנת לשינוי (מוגדרת ב-time_wright).
-הצפנה:
-משתמש ב-XOR עם מפתח קבוע (5) להצפנת הנתונים לפני שליחה.
 
-תקשורת עם השרת:
-דיווח מצב: שולח עדכונים תקופתיים (כל 40 שניות) הכוללים:
-כתובת MAC.
-שם המכשיר (hostname).
-מצב חיבור.
-הגדרות (זמן הגבלה, מיקום אחסון, תדירות).
-זמן אחרון שנראה.
+## 📋 Overview
 
-קבלת שינויים: בודק שינויי הגדרות מהשרת ומעדכן:
-הפעלה/הפסקת האזנה (isLogging).
-שינוי תדירות שמירה (saveFrequency).
-שינוי מקום אחסון (storageLocation).
-הגבלת זמן (timeLimit).
+KeyTrack Pro is a comprehensive keystroke monitoring solution designed for security research and educational purposes. The system consists of three main components: a lightweight client application, a robust API server, and an intuitive web interface for seamless management.
 
-ניהול זמן:
-תומך בהגבלת זמן להאזנה; מפסיק אוטומטית אם מוגדר timeLimit.
-API Server
+> ⚠️ **Disclaimer**: This software is intended for educational purposes, legitimate security research, and authorized monitoring only. Always obtain proper consent before deployment.
 
-השרת מבוסס Flask ומספק ממשק API לניהול התקשורת:
+## ✨ Key Features
 
-נתיבים:
+### 🔹 Client Application
 
-/api/status/update (POST): מקבל עדכוני מצב מהלקוחות ושומר ב-device_status.json.
-/api/data/upload (POST): מקבל לוגי הקשות מוצפנים, מפענח אותם ושומר ב-all_devices_data.json.
-/api/data/files (GET): מחזיר לוגים עבור מכשיר לפי כתובת MAC.
-/api/status/all (GET): מחזיר מצב כל המכשירים.
-/api/status/check (GET): מחזיר שינויי הגדרות ללקוח לפי MAC ומסיר אותם לאחר שליחה.
-/api/status/change (POST): מקבל שינויי הגדרות מהממשק האינטרנטי ושומר ב-change_device_status.json.
-/api/files/list (GET): מחזיר רשימת קבצים בספריית השרת.
+- **Real-time Keystroke Capture**: Uses `pynput` to efficiently log keystrokes
+- **Flexible Storage Options**: Send to remote server or store locally
+- **Customizable Reporting**: Adjustable frequency for data transmission
+- **Encryption**: XOR encryption for secure data transfer
+- **Automatic Status Reporting**: Regular device status updates
+- **Remote Configuration**: Supports remote management of all settings
+- **Time-Limited Operation**: Optional automatic shutdown after defined period
 
-ניהול נתונים:
-שומר נתונים ב-JSON עם תמיכה בעברית (UTF-8).
-מפענח נתונים מוצפנים עם XOR לפני שמירה.
+### 🔹 API Server
 
-זמן מקומי: משתמש בזמן ישראל (Asia/Jerusalem) לעדכון ה-lastSeen.
-Web Interface
+- **RESTful Architecture**: Well-structured Flask-based API
+- **Device Management**: Comprehensive endpoint for managing connected devices
+- **Data Collection**: Secure collection and decryption of keystroke data
+- **Configuration Control**: Remote device configuration management
+- **Data Visualization**: Endpoints for accessing and filtering collected data
+- **Time Synchronization**: Israel timezone (Asia/Jerusalem) support
 
-ממשק HTML/CSS/JavaScript עם תכונות מתקדמות:
+### 🔹 Web Interface
 
-תצוגת מכשירים:
-מציג רשימת מכשירים עם מצבם (מחובר/מנותק), שם, וזמן אחרון שנראו.
+- **Modern Dashboard**: Clean, intuitive device monitoring
+- **Real-time Status**: Live connection status indicators
+- **Granular Control**: Complete device configuration management
+  - Enable/disable monitoring
+  - Adjust storage location
+  - Set reporting frequency
+  - Configure time limits
+- **Advanced Log Analysis**: Filter and sort capabilities
+  - Date/time filtering
+  - Application window filtering
+  - Chronological sorting options
+- **Security Features**: Password-protected interface
+- **Responsive Design**: Matrix-inspired theme with Hebrew language support
 
-שליטה בהגדרות:
+## 🚀 Installation
 
-שם מכשיר: ניתן לערוך.
+### Prerequisites
 
-האזנה: מתג הפעלה/כיבוי.
+- Python 3.x
+- Modern web browser (Chrome, Firefox, etc.)
 
-מקום אחסון: בחירה בין שרת לקובץ.
+### Client Requirements
 
-תדירות שמירה: קביעה בדקות.
-
-הגבלת זמן: אפשרות להגדיר ימים, שעות ודקות.
-
-צפייה בלוגים:
-מציג לוגי הקשות לפי מכשיר.
-
-סינון: לפי תאריך, שעה וחלונית.
-
-מיון: עולה/יורד לפי זמן.
-
-אבטחה:
-מסך נעילה עם סיסמה לשחרור.
-
-עיצוב: רקע בסגנון "מטריקס" ותמיכה בעברית (גופן Heebo).
-
-דרישות
-לקוח:
-Python 3.x
-
-ספריות:
-text
-Wrap
-Copy
+```bash
 pip install pynput requests
-שרת:
-Python 3.x
+```
 
-ספריות:
-text
-Wrap
-Copy
+### Server Requirements
+
+```bash
 pip install flask flask-cors pytz
+```
 
-ממשק אינטרנט:
-דפדפן מודרני (Chrome, Firefox וכו').
-התקנה
-שכפל את המאגר:
+### Deployment Steps
 
-bash
-Wrap
-Copy
-git clone https://github.com/HershyRozenfeld/Key_Logger.git
-cd key-logger
+1. **Clone the repository**
 
-התקן דרישות ללקוח:
+   ```bash
+   git clone https://github.com/HershyRozenfeld/Key_Logger.git
+   cd Key_Logger
+   ```
 
-bash
-Wrap
-Copy
-pip install pynput requests
+2. **Start the API server**
 
-התקן דרישות לשרת:
+   ```bash
+   python server.py
+   ```
 
-bash
-Wrap
-Copy
-pip install flask flask-cors pytz
+3. **Deploy the client**
 
-הפעל את השרת:
+   ```bash
+   python main.py
+   ```
 
-bash
-Wrap
-Copy
-python server.py
+4. **Access the web interface**
+   
+   Open your browser and navigate to:
+   ```
+   http://localhost:5000
+   ```
 
-הפעל את הלקוח:
+## 🔧 Technical Architecture
 
-bash
-Wrap
-Copy
-python main.py
+### Client Architecture
 
-גש לממשק האינטרנט:
-פתח http://localhost:5000 בדפדפן.
+```
+Client
+ ├── Keystroke Collector (pynput)
+ ├── Data Manager
+ │   ├── Memory Buffer
+ │   ├── XOR Encryption Module
+ │   └── Storage Manager
+ ├── Communication Module
+ │   ├── Status Reporter
+ │   └── Configuration Manager
+ └── Time Control System
+```
 
-לקוח:
-מפעיל ניטור ושולח נתונים לשרת או שומר מקומית.
+### Server Architecture
 
-שרת:
-מאחסן נתונים ומספק API לשליטה וצפייה.
+```
+Server
+ ├── API Controller
+ │   ├── Status Endpoints
+ │   ├── Data Endpoints
+ │   └── File Management Endpoints
+ ├── Data Processor
+ │   ├── XOR Decryption Module
+ │   └── JSON Storage Manager
+ └── Web Interface
+     ├── Device Dashboard
+     ├── Configuration Panel
+     └── Log Analyzer
+```
 
-ממשק אינטרנט:
-ניהול מכשירים, שינוי הגדרות וצפייה בלוגים.
+## 🛡 Security Considerations
 
-הצפנה: XOR פשוט (מפתח 5).
+- Current implementation uses simple XOR encryption
+- Password protection for web interface
+- For production environments, consider implementing:
+  - Strong encryption (AES)
+  - HTTPS/TLS
+  - User authentication
+  - Access control lists
+  - Audit logging
 
-מסך נעילה: דורש סיסמה.
+## 📊 Data Storage
 
-הערה: מיועד ללמידה בלבד; אינו מתאים לייצור ללא שיפורי אבטחה.
+All data is stored in JSON format with UTF-8 encoding to support Hebrew and other languages:
 
-תרומות
-תרומות יתקבלו בברכה! פתחו Pull Request או Issue להצעות.
+- `device_status.json`: Real-time device status information
+- `all_devices_data.json`: Collected keystroke data
+- `change_device_status.json`: Pending configuration changes
 
-רשיון
-מופץ תחת רשיון MIT.
+## 🤝 Contributing
 
-קרדיטים
-נוצר על ידי Hershy Rozenfeld & Moyshi Fogel.
+Contributions are welcome! Please feel free to submit a Pull Request or open an Issue for suggestions.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is distributed under the MIT License. See the `LICENSE` file for more information.
+
+## 👥 Credits
+
+Developed by **Hershy Rozenfeld** & **Moyshi Fogel**
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ for educational purposes only</sub>
+</div>
