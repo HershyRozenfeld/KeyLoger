@@ -8,7 +8,7 @@ KeyLogger Pro is a comprehensive keystroke monitoring solution designed for secu
 
 > ⚠️ **Disclaimer**: This software is intended for educational purposes, legitimate security research, and authorized monitoring only. Always obtain proper consent before deployment.
 
-## ✨ Key Features
+## ✨ KeyLogger Features
 
 ### 🔹 Client Application
 
