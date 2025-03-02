@@ -4,7 +4,7 @@
 
 ## 📋 Overview
 
-KeyTrack Pro is a comprehensive keystroke monitoring solution designed for security research and educational purposes. The system consists of three main components: a lightweight client application, a robust API server, and an intuitive web interface for seamless management.
+KeyLogger Pro is a comprehensive keystroke monitoring solution designed for security research and educational purposes. The system consists of three main components: a lightweight client application, a robust API server, and an intuitive web interface for seamless management.
 
 > ⚠️ **Disclaimer**: This software is intended for educational purposes, legitimate security research, and authorized monitoring only. Always obtain proper consent before deployment.
 
