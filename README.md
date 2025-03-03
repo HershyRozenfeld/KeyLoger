@@ -6,7 +6,9 @@
 
 KeyLogger Pro is a comprehensive keystroke monitoring solution designed for security research and educational purposes. The system consists of three main components: a lightweight client application, a robust API server, and an intuitive web interface for seamless management.
 
+
 > ⚠️ **Disclaimer**: This software is intended for educational purposes, legitimate security research, and authorized monitoring only. Always obtain proper consent before deployment.
+
 
 ## ✨ KeyLogger Features
 
@@ -20,6 +22,7 @@ KeyLogger Pro is a comprehensive keystroke monitoring solution designed for secu
 - **Remote Configuration**: Supports remote management of all settings
 - **Time-Limited Operation**: Optional automatic shutdown after defined period
 
+
 ### 🔹 API Server
 
 - **RESTful Architecture**: Well-structured Flask-based API
@@ -28,6 +31,7 @@ KeyLogger Pro is a comprehensive keystroke monitoring solution designed for secu
 - **Configuration Control**: Remote device configuration management
 - **Data Visualization**: Endpoints for accessing and filtering collected data
 - **Time Synchronization**: Israel timezone (Asia/Jerusalem) support
+
 
 ### 🔹 Web Interface
 
@@ -44,6 +48,7 @@ KeyLogger Pro is a comprehensive keystroke monitoring solution designed for secu
   - Chronological sorting options
 - **Security Features**: Password-protected interface
 - **Responsive Design**: Matrix-inspired theme with Hebrew language support
+
 
 ## 🚀 Installation
 
@@ -92,6 +97,7 @@ pip install flask flask-cors pytz
    http://localhost:5000
    ```
 
+
 ## 🔧 Technical Architecture
 
 ### Client Architecture
@@ -126,6 +132,7 @@ Server
      └── Log Analyzer
 ```
 
+
 ## 🛡 Security Considerations
 
 - Current implementation uses simple XOR encryption
@@ -137,6 +144,7 @@ Server
   - Access control lists
   - Audit logging
 
+
 ## 📊 Data Storage
 
 All data is stored in JSON format with UTF-8 encoding to support Hebrew and other languages:
@@ -144,6 +152,7 @@ All data is stored in JSON format with UTF-8 encoding to support Hebrew and othe
 - `device_status.json`: Real-time device status information
 - `all_devices_data.json`: Collected keystroke data
 - `change_device_status.json`: Pending configuration changes
+
 
 ## 🤝 Contributing
 
@@ -155,9 +164,11 @@ Contributions are welcome! Please feel free to submit a Pull Request or open an 
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+
 ## 📄 License
 
 This project is distributed under the MIT License. See the `LICENSE` file for more information.
+
 
 ## 👥 Credits
 
